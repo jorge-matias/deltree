@@ -1,9 +1,9 @@
 package com.nivuk;
 
 public class Deltree {
-    private final MockFileAPI fileAPI;
+    private final FileAPI fileAPI;
 
-    public Deltree(MockFileAPI fileAPI) {
+    public Deltree(FileAPI fileAPI) {
         this.fileAPI = fileAPI;
     }
 

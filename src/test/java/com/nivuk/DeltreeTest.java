@@ -6,22 +6,26 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DeltreeTest {
-    private MockFileAPI mockApi;
+    private FileAPI mockApi;
     private Deltree deltree;
 
     @BeforeEach
     void setUp() {
-        mockApi = new MockFileAPI();
         // Simulate structure:
         // /
         // ├── /a
         // │   ├── /a/b
         // │   └── /a/file1
         // └── /file2
-        mockApi.addFile("/a", true);
-        mockApi.addFile("/a/b", true);
-        mockApi.addFile("/a/file1", false);
-        mockApi.addFile("/file2", false);
+        mockApi = new MockFileAPI(
+                MockFileAPI.builder()
+                        .makeDir("a")
+                        .changeDir("a")
+                            .makeDir("b")
+                            .addFile("file1")
+                            .changeDir("..")
+                        .addFile("file2")
+        );
         deltree = new Deltree(mockApi);
     }
 
@@ -53,4 +57,3 @@ public class DeltreeTest {
         assertFalse(mockApi.list("/").contains("/a"));
     }
 }
-
