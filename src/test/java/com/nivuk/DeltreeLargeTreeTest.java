@@ -16,10 +16,11 @@ public class DeltreeLargeTreeTest {
         assertTrue(largeApi.isDirectory("/big"));
         assertEquals(filesAndDirs * 2, largeApi.list("/big").size());
         // Check a subdirectory
-        assertTrue(largeApi.isDirectory("/big/dir0"));
-        assertEquals(filesAndDirs * 2, largeApi.list("/big/dir0").size());
+        assertTrue(largeApi.isDirectory("/big/dir_0"));
+        assertTrue(largeApi.isDirectory("/big/dir_0/dir_0_dir_0"));
+        assertEquals(filesAndDirs * 2, largeApi.list("/big/dir_0").size());
         // Check a file
-        assertFalse(largeApi.isDirectory("/big/file0"));
+        assertFalse(largeApi.isDirectory("/big/file_0"));
         // Now test recursive delete
         assertTrue(deltree.deleteRecursive("/big"));
         assertFalse(largeApi.isDirectory("/big"));
@@ -32,14 +33,18 @@ public class DeltreeLargeTreeTest {
     }
 
     private static void buildLevel(MockFileAPI.Builder builder, int filesAndDirs, int levels) {
+        buildLevel(builder, filesAndDirs, levels, "");
+    }
+
+    private static void buildLevel(MockFileAPI.Builder builder, int filesAndDirs, int levels, String prefix) {
         if (levels == 0) return;
         for (int i = 0; i < filesAndDirs; i++) {
-            builder.makeDir("dir" + i);
-            builder.addFile("file" + i);
-        }
-        for (int i = 0; i < filesAndDirs; i++) {
-            builder.changeDir("dir" + i);
-            buildLevel(builder, filesAndDirs, levels - 1);
+            String dirName = prefix + "dir_" + i;
+            String fileName = prefix + "file_" + i;
+            builder.makeDir(dirName);
+            builder.addFile(fileName);
+            builder.changeDir(dirName);
+            buildLevel(builder, filesAndDirs, levels - 1, dirName + "_");
             builder.changeDir("..");
         }
     }
