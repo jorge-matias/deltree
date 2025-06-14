@@ -1,6 +1,12 @@
 package com.nivuk;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MockFileAPI implements FileAPI {
     // Abstract Node class
@@ -13,17 +19,25 @@ public class MockFileAPI implements FileAPI {
 
     // Directory node
     private static class DirNode extends Node {
-        Map<String, Node> children = new HashMap<>();
+        private final Map<String, Node> children;
+
         DirNode(String name) {
             super(name);
+            children = new HashMap<>();
+        }
+
+        Map<String, Node> getChildren() {
+            return children;
+        }
+
+        boolean hasChildren() {
+            return !children.isEmpty();
         }
     }
 
-    // File node
+    // File node (singleton, since no metadata)
     private static class FileNode extends Node {
-        FileNode(String name) {
-            super(name);
-        }
+        FileNode(String name) { super(name); }
     }
 
     private final DirNode root = new DirNode("/");
@@ -34,8 +48,10 @@ public class MockFileAPI implements FileAPI {
         String[] parts = path.substring(1).split("/");
         Node curr = root;
         for (String part : parts) {
-            if (!(curr instanceof DirNode dir) || !dir.children.containsKey(part)) return null;
-            curr = dir.children.get(part);
+            if (!(curr instanceof DirNode dir)) return null;
+            Map<String, Node> children = dir.children == null ? Collections.emptyMap() : dir.children;
+            if (!children.containsKey(part)) return null;
+            curr = children.get(part);
         }
         return curr;
     }
@@ -49,31 +65,36 @@ public class MockFileAPI implements FileAPI {
         return (parent instanceof DirNode dir) ? dir : null;
     }
 
+    @Override
     public List<String> list(String path) {
         Node node = findNode(path);
         if (!(node instanceof DirNode dir)) return new ArrayList<>();
-        List<String> result = new ArrayList<>();
-        for (Node child : dir.children.values()) {
+        Map<String, Node> children = dir.children == null ? Collections.emptyMap() : dir.children;
+        List<String> result = new ArrayList<>(children.size());
+        for (Node child : children.values()) {
             String childPath = path.equals("/") ? "/" + child.name : path + "/" + child.name;
             result.add(childPath);
         }
         return result;
     }
 
+    @Override
     public boolean isDirectory(String path) {
         Node node = findNode(path);
         return node instanceof DirNode;
     }
 
+    @Override
     public boolean delete(String path) {
         if (path.equals("/")) return false;
         DirNode parent = findParent(path);
         if (parent == null) return false;
         String name = path.substring(path.lastIndexOf('/') + 1);
-        Node node = parent.children.get(name);
+        Map<String, Node> children = parent.children == null ? Collections.emptyMap() : parent.children;
+        Node node = children.get(name);
         if (node == null) return false;
-        if (node instanceof DirNode dir && !dir.children.isEmpty()) return false;
-        parent.children.remove(name);
+        if (node instanceof DirNode dir && dir.hasChildren()) return false;
+        parent.getChildren().remove(name);
         return true;
     }
 
@@ -84,12 +105,12 @@ public class MockFileAPI implements FileAPI {
         private final Deque<DirNode> stack = new ArrayDeque<>();
 
         public Builder addFile(String name) {
-            current.children.put(name, new FileNode(name));
+            current.getChildren().put(name, new FileNode(name));
             return this;
         }
         public Builder makeDir(String name) {
             DirNode dir = new DirNode(name);
-            current.children.put(name, dir);
+            current.getChildren().put(name, dir);
             return this;
         }
         public Builder changeDir(String name) {
@@ -98,7 +119,7 @@ public class MockFileAPI implements FileAPI {
                     current = stack.pop();
                 }
             } else {
-                Node node = current.children.get(name);
+                Node node = current.getChildren().get(name);
                 if (node instanceof DirNode dir) {
                     stack.push(current);
                     current = dir;
@@ -112,7 +133,7 @@ public class MockFileAPI implements FileAPI {
     public static Builder builder() { return new Builder(); }
 
     public MockFileAPI(Builder builder) {
-        this.root.children.clear();
-        this.root.children.putAll(builder.build().children);
+        this.root.getChildren().clear();
+        this.root.getChildren().putAll(builder.build().getChildren());
     }
 }
